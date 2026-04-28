@@ -1,6 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import os
+import re
 
 from .search_utils import EMBEDDINGS_PATH, CACHE_DIR, load_movies
 
@@ -87,6 +88,28 @@ def semantic_search(query, limit=5):
         print(f"{i}. {doc['title']} (score: {sim:.4f})")
         print(f"  {doc['description'][:100]}...")
         print()
+
+def chunk(text, chunk_size=200, overlap=0):
+    if overlap >= chunk_size:
+        raise ValueError("Overlap must be less than chunk size")
+    words = text.split()
+    chunks = [' '.join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size - overlap)]
+    print(f"Chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"Chunk {i}. {chunk}")
+
+def semantic_chunking(text, max_chunk_size=4, overlap=0):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    step = max_chunk_size - overlap
+    starts = list(range(0, len(sentences), step))
+    if len(starts) >= 2 and starts[-2] + max_chunk_size >= len(sentences):
+        starts.pop()
+    chunks = [' '.join(sentences[i:i+max_chunk_size]) for i in starts]
+    if len(chunks) >= 2 and chunks[-1] in chunks[-2]:
+        chunks.pop()
+    print(f"Semantically chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"{chunk}")
 
 def cosine_similarity(vec1, vec2):
     dot_product = np.dot(vec1, vec2)
