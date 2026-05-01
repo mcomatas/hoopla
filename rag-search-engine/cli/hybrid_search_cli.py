@@ -44,6 +44,12 @@ def main() -> None:
         choices=["spell", "rewrite", "expand"],
         help="Query enhancement method",
     )
+    rrf_parser.add_argument(
+        "--rerank-method",
+        type=str,
+        choices=["individual", "batch", "cross_encoder"],
+        help="Rerank the top documents"
+    )
 
     args = parser.parse_args()
 
@@ -72,7 +78,7 @@ def main() -> None:
                 print(f"   {res['document'][:100]}...")
                 print()
         case "rrf-search":
-            result = rrf_search_command(args.query, args.k, args.limit, args.enhance)
+            result = rrf_search_command(args.query, args.k, args.limit, args.enhance, args.rerank_method)
 
             print(
                 f"RRF Hybrid Search Results for '{result['query']}' (k={result['k']}):"
@@ -82,6 +88,10 @@ def main() -> None:
             if result["enhanced_query"]:
                 print(f"Enhanced query: ({result['enhanced_method']}): {result["query"]} -> {result['enhanced_query']}\n")
 
+            if result["reranked"]:
+                print(f"Re-ranking top {len(result['results'])} results using {result['rerank_method']}...\n")
+                print()
+
             for i, res in enumerate(result["results"], 1):
                 metadata = res.get("metadata", {})
                 bm25_rank = metadata.get("bm25_rank")
@@ -89,6 +99,12 @@ def main() -> None:
                 bm25_str = bm25_rank if bm25_rank is not None else "-"
                 semantic_str = semantic_rank if semantic_rank is not None else "-"
                 print(f"{i}. {res['title']}")
+                if "individual_score" in res:
+                    print(f"  Re-rank Score: {res.get("individual_score", 0):.3f}/10")
+                if "batch_rank" in res:
+                    print(f"   Re-rank Rank: {res.get('batch_rank', 0)}")
+                if "cross_encoder_score" in res:
+                    print(f"  Cross-Encoder Score: {res['cross_encoder_score']:.3f}")
                 print(f"  RRF Score: {res['score']:.3f}")
                 print(f"  BM25 Rank: {bm25_str}, Semantic Rank: {semantic_str}")
                 print(f"  {res['document'][:100]}...")

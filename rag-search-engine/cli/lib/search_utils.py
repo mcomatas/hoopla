@@ -4,6 +4,8 @@ from typing import Any
 
 DEFAULT_ALPHA = 0.5
 
+SEARCH_MULTIPLIER = 5
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 MOVIES_PATH = os.path.join(PROJECT_ROOT, "data", "movies.json")
 STOPWORDS_PATH = os.path.join(PROJECT_ROOT, "data", "stopwords.txt")

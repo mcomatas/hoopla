@@ -5,11 +5,13 @@ from .keyword_search import InvertedIndex
 from .search_utils import (
     DEFAULT_ALPHA,
     DEFAULT_SEARCH_LIMIT,
+    SEARCH_MULTIPLIER,
     format_search_result,
     load_movies,
 )
 from .semantic_search import ChunkedSemanticSearch
 from .query_enhancement import enhance_query
+from .reranking import rerank
 
 
 class HybridSearch:
@@ -188,13 +190,26 @@ def rrf_score(rank, k=60):
     return 1 / (k + rank)
 
 def rrf_search_command(
-    query: str, k: int=60, limit: int=DEFAULT_SEARCH_LIMIT, enhance: Optional[str] = None
+    query: str,
+    k: int=60,
+    limit: int=DEFAULT_SEARCH_LIMIT,
+    enhance: Optional[str] = None,
+    rerank_method: Optional[str] = None
 ) -> dict:
     movies = load_movies()
     searcher = HybridSearch(movies)
+
     original_query = query
     enhanced_query = enhance_query(query, enhance)
-    results = searcher.rrf_search(enhanced_query, k, limit)
+
+    search_limit = limit * SEARCH_MULTIPLIER if rerank_method else limit
+
+    results = searcher.rrf_search(enhanced_query, k, search_limit)
+
+    reranked = False
+    if rerank_method:
+        results = rerank(query, results, method=rerank_method, limit=limit)
+        reranked = True
 
     return {
         "original_query": original_query,
@@ -202,6 +217,7 @@ def rrf_search_command(
         "enhanced_method": enhance,
         "query": query,
         "k": k,
-        "limit": limit,
+        "rerank_method": rerank_method,
+        "reranked": reranked,
         "results": results,
     }
