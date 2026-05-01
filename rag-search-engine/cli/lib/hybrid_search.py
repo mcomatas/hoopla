@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from .keyword_search import InvertedIndex
 from .search_utils import (
@@ -8,6 +9,7 @@ from .search_utils import (
     load_movies,
 )
 from .semantic_search import ChunkedSemanticSearch
+from .query_enhancement import enhance_query
 
 
 class HybridSearch:
@@ -186,14 +188,18 @@ def rrf_score(rank, k=60):
     return 1 / (k + rank)
 
 def rrf_search_command(
-    query: str, k: int=60, limit: int=DEFAULT_SEARCH_LIMIT
+    query: str, k: int=60, limit: int=DEFAULT_SEARCH_LIMIT, enhance: Optional[str] = None
 ) -> dict:
     movies = load_movies()
     searcher = HybridSearch(movies)
-    results = searcher.rrf_search(query, k, limit)
+    original_query = query
+    enhanced_query = enhance_query(query, enhance)
+    results = searcher.rrf_search(enhanced_query, k, limit)
 
     return {
-        "original_query": query,
+        "original_query": original_query,
+        "enhanced_query": enhanced_query,
+        "enhanced_method": enhance,
         "query": query,
         "k": k,
         "limit": limit,
