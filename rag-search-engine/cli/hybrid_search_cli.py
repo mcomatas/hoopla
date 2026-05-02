@@ -1,6 +1,12 @@
 import argparse
+import logging
+import os
 
 from lib.hybrid_search import normalize_scores, rrf_search_command, weighted_search_command
+
+if os.getenv("DEBUG"):
+    logging.basicConfig(level=logging.WARNING, format="[%(levelname)s %(name)s] %(message)s")
+    logging.getLogger("lib").setLevel(logging.DEBUG)
 
 
 def main() -> None:

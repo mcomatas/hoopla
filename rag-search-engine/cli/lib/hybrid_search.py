@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -12,6 +13,8 @@ from .search_utils import (
 from .semantic_search import ChunkedSemanticSearch
 from .query_enhancement import enhance_query
 from .reranking import rerank
+
+logger = logging.getLogger(__name__)
 
 
 class HybridSearch:
@@ -200,16 +203,30 @@ def rrf_search_command(
     searcher = HybridSearch(movies)
 
     original_query = query
+    logger.debug("Original query: %r", original_query)
+
     enhanced_query = enhance_query(query, enhance)
+    logger.debug("Enhanced query (method=%s): %r", enhance, enhanced_query)
 
     search_limit = limit * SEARCH_MULTIPLIER if rerank_method else limit
 
     results = searcher.rrf_search(enhanced_query, k, search_limit)
+    logger.debug(
+        "RRF results (%d): %s",
+        len(results),
+        [(r["title"], round(r["score"], 4)) for r in results],
+    )
 
     reranked = False
     if rerank_method:
         results = rerank(query, results, method=rerank_method, limit=limit)
         reranked = True
+        logger.debug(
+            "Reranked results (method=%s, %d): %s",
+            rerank_method,
+            len(results),
+            [r["title"] for r in results],
+        )
 
     return {
         "original_query": original_query,
