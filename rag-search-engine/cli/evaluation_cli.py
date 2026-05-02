@@ -19,6 +19,7 @@ def main():
     for query, data in results.items():
         print(f"- Query: {query}")
         print(f"  - Precision@{limit}: {data['precision']:.4f}")
+        print(f"  - Recall@{limit}: {data['recall']:.4f}")
         print(f"  - Retrieved: {', '.join(data['retrieved'])}")
         print(f"  - Relevant: {', '.join(data['relevant'])}")
         print()
