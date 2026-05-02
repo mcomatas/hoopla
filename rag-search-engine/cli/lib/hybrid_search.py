@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Optional
@@ -13,6 +14,17 @@ from .search_utils import (
 from .semantic_search import ChunkedSemanticSearch
 from .query_enhancement import enhance_query
 from .reranking import rerank
+
+from dotenv import load_dotenv
+from google import genai
+
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY environment variable not set")
+
+client = genai.Client(api_key=api_key)
+model = 'gemma-3-27b-it'
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +209,8 @@ def rrf_search_command(
     k: int=60,
     limit: int=DEFAULT_SEARCH_LIMIT,
     enhance: Optional[str] = None,
-    rerank_method: Optional[str] = None
+    rerank_method: Optional[str] = None,
+    evaluate: bool = False,
 ) -> dict:
     movies = load_movies()
     searcher = HybridSearch(movies)
@@ -238,3 +251,44 @@ def rrf_search_command(
         "reranked": reranked,
         "results": results,
     }
+
+def evaluate_results(query: str, results: list) -> dict:
+    formatted_results = [
+         f"{i + 1}. {r['title']}: {r['document']}"
+         for i, r in enumerate(results)
+     ]
+
+    prompt = f"""Rate how relevant each result is to this query on a 0-3 scale:
+
+    Query: "{query}"
+
+    Results:
+    {chr(10).join(formatted_results)}
+
+    Scale:
+    - 3: Highly relevant
+    - 2: Relevant
+    - 1: Marginally relevant
+    - 0: Not relevant
+
+    Do NOT give any numbers other than 0, 1, 2, or 3.
+
+    Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
+
+    [2, 0, 3, 2, 0, 1]"""
+
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+    )
+    ranking_text = (response.text or "").strip()
+    if ranking_text.startswith("```"):
+        ranking_text = ranking_text.strip("`").removeprefix("json").strip()
+    scores = json.loads(ranking_text)
+
+    if len(scores) != len(results):
+        raise ValueError(
+            f"LLM returned {len(scores)} scores for {len(results)} results"
+        )
+
+    return [{**r, "relevance_score": s} for r, s in zip(results, scores)]

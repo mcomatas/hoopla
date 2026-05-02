@@ -2,7 +2,12 @@ import argparse
 import logging
 import os
 
-from lib.hybrid_search import normalize_scores, rrf_search_command, weighted_search_command
+from lib.hybrid_search import (
+    normalize_scores,
+    rrf_search_command,
+    weighted_search_command,
+    evaluate_results,
+)
 
 if os.getenv("DEBUG"):
     logging.basicConfig(level=logging.WARNING, format="[%(levelname)s %(name)s] %(message)s")
@@ -55,6 +60,12 @@ def main() -> None:
         type=str,
         choices=["individual", "batch", "cross_encoder"],
         help="Rerank the top documents"
+    )
+
+    rrf_parser.add_argument(
+        "--evaluate",
+        action="store_true",
+        help="Evaluate the search results against a ground truth file",
     )
 
     args = parser.parse_args()
@@ -115,6 +126,11 @@ def main() -> None:
                 print(f"  BM25 Rank: {bm25_str}, Semantic Rank: {semantic_str}")
                 print(f"  {res['document'][:100]}...")
                 print()
+
+            if args.evaluate:
+                evaluated_results = evaluate_results(result["query"], result["results"])
+                for i, res in enumerate(evaluated_results, start=1):
+                    print(f"{i}. {res['title']}: {res['relevance_score']}/3")
         case _:
             parser.print_help()
 
